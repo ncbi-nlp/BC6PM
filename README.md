@@ -34,8 +34,8 @@ performance, merchantability or fitness for any particular purpose.
   * git clone https://github.com/ncbi-nlp/BC6PM.git
 
 2. Run eval_xml.py (BioC XML) or eval_json.py (BioC JSON)
-  * eval_xml.py [triage|relation] [gold_standard_file] [prediction_file]
-  * eval_json.py [triage|relation] [gold_standard_file] [prediction_file]
+  * $ python eval_xml.py [triage|relation] [gold_standard_file] [prediction_file]
+  * $ python eval_json.py [triage|relation] [gold_standard_file] [prediction_file]
 
 ## List of Contributors ##
 
