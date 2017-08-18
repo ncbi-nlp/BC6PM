@@ -1,7 +1,8 @@
 # Evaluation Scripts for BioCreative VI Precision Medicine Track #
 
 Given gold standard and prediction sets, the Python scripts return
-precision, recall and F1 scores for triage and relation tasks.
+precision, recall and F1 scores for the document triage and relation
+extraction tasks, http://www.biocreative.org/tasks/biocreative-vi/track-4.
 The current evaluation is based on exact match, which might be changed
 in the official run. This early release is to help validate the format
 of paritipating teams' prediction sets.
