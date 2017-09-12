@@ -39,6 +39,7 @@ def JSON_Collection_Triage(collection):
 
 def Classification_Performance_Triage(collection, gold_standard_positive, gold_standard_negative):
     correct = prediction_count = 0
+    precision = recall = f1 = 0
 
     for document in collection.get('documents', []):
         id, label, relations = JSON_Document(document)
@@ -47,9 +48,10 @@ def Classification_Performance_Triage(collection, gold_standard_positive, gold_s
                 correct += 1.
             prediction_count += 1.
 
-    precision = correct / prediction_count
-    recall = correct / len(gold_standard_positive)
-    f1 = 2. * precision * recall / (precision + recall)
+    if prediction_count > 0 and correct > 0 and len(gold_standard_positive) > 0:
+        precision = correct / prediction_count
+        recall = correct / len(gold_standard_positive)
+        f1 = 2. * precision * recall / (precision + recall)
     
     return precision, recall, f1
 
@@ -80,6 +82,7 @@ def JSON_Collection_Relation(collection):
 
 def Classification_Performance_Relation(collection, gold_standard_relations):
     correct = prediction_count = 0
+    precision = recall = f1 = 0
 
     for document in collection.get('documents', []):
         id, label, relations = JSON_Document(document)
@@ -104,9 +107,10 @@ def Classification_Performance_Relation(collection, gold_standard_relations):
                             correct += 1.
                         prediction_count += 1.
 
-    precision = correct / prediction_count
-    recall = correct / len(gold_standard_relations)
-    f1 = 2. * precision * recall / (precision + recall)
+    if prediction_count > 0 and correct > 0 and len(gold_standard_relations) > 0:
+        precision = correct / prediction_count
+        recall = correct / len(gold_standard_relations)
+        f1 = 2. * precision * recall / (precision + recall)
     
     return precision, recall, f1
 
