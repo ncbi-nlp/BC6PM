@@ -50,6 +50,7 @@ def JSON_Collection_Triage(collection):
 def Classification_Performance_Triage(collection, gold_standard_positive, gold_standard_negative):
     correct = prediction_count = 0
     precision = recall = f1 = 0
+    tp = fp = tn = fn = 0
 
     previously_seen = set()
     prediction_dict = {}
@@ -69,6 +70,11 @@ def Classification_Performance_Triage(collection, gold_standard_positive, gold_s
         recall = correct / len(gold_standard_positive)
         f1 = 2. * precision * recall / (precision + recall)
 
+        tp = correct
+        fp = prediction_count - correct
+        tn = len(gold_standard_negative) - fp
+        fn = len(gold_standard_positive) - correct
+
     correct = prediction_count = 0
     average_precision = 0
 
@@ -80,7 +86,7 @@ def Classification_Performance_Triage(collection, gold_standard_positive, gold_s
             average_precision += correct / prediction_count
     average_precision /= len(gold_standard_positive)
 
-    return average_precision, precision, recall, f1
+    return average_precision, precision, recall, f1, tp, fp, tn, fn
 
 def JSON_Collection_Relation(collection):
     all_ids = set()
@@ -111,7 +117,7 @@ def JSON_Collection_Relation(collection):
 
 def Classification_Performance_Relation(collection, gold_standard_ids, gold_standard_relations):
     correct = prediction_count = 0
-    precision = recall = f1 = 0
+    micro_precision = micro_recall = micro_f1 = 0
 
     previously_seen = set()
     prediction_dict = {}
@@ -146,11 +152,11 @@ def Classification_Performance_Relation(collection, gold_standard_ids, gold_stan
                             previously_seen.add(relation_string)
 
     if prediction_count > 0 and correct > 0 and len(gold_standard_relations) > 0:
-        precision = correct / prediction_count
-        recall = correct / len(gold_standard_relations)
-        f1 = 2. * precision * recall / (precision + recall)
+        micro_precision = correct / prediction_count
+        micro_recall = correct / len(gold_standard_relations)
+        micro_f1 = 2. * micro_precision * micro_recall / (micro_precision + micro_recall)
     
-    return precision, recall, f1
+    return micro_precision, micro_recall, micro_f1
 
 program_name = subtask = gold_standard_file = prediction_file = None
 if len(sys.argv) == 4:
@@ -169,16 +175,17 @@ with open(gold_standard_file) as f1, open(prediction_file) as f2:
 
     if subtask == 'triage':
         gold_standard_positive, gold_standard_negative = JSON_Collection_Triage(gold_standard_collection)
-        average_precision, precision, recall, f1 = Classification_Performance_Triage(prediction_collection, gold_standard_positive, gold_standard_negative)
+        average_precision, precision, recall, f1, tp, fp, tn, fn = Classification_Performance_Triage(prediction_collection, gold_standard_positive, gold_standard_negative)
 
         print('Avg Precision: %.4f' % average_precision)
+        print('TP: %d / FP: %d / TN: %d / FN: %d' % (tp, fp, tn, fn))
         print('Precision: %.4f' % precision)
         print('Recall: %.4f' % recall)
         print('F1: %.4f' % f1)        
     else:
         gold_standard_ids, gold_standard_relations = JSON_Collection_Relation(gold_standard_collection)
-        precision, recall, f1 = Classification_Performance_Relation(prediction_collection, gold_standard_ids, gold_standard_relations)
+        micro_precision, micro_recall, micro_f1 = Classification_Performance_Relation(prediction_collection, gold_standard_ids, gold_standard_relations)
 
-        print('Precision: %.4f' % precision)
-        print('Recall: %.4f' % recall)
-        print('F1: %.4f' % f1)
+        print('Micro Precision: %.4f' % micro_precision)
+        print('Micro Recall: %.4f' % micro_recall)
+        print('Micro F1: %.4f' % micro_f1)
