@@ -43,6 +43,7 @@ def BioC_Collection_Triage(collection):
             positives.add(id)
         else:
             negatives.add(id)
+
     return positives, negatives
 
 def Classification_Performance_Triage(collection, gold_standard_positive, gold_standard_negative):
@@ -111,9 +112,19 @@ def BioC_Collection_Relation(collection):
 
     return all_ids, all_relations
 
+def PMID_Relation_Count(substring, relations):
+    count = 0
+
+    for relation in relations:
+        if relation.startswith(substring):
+            count += 1.
+
+    return count
+
 def Classification_Performance_Relation(collection, gold_standard_ids, gold_standard_relations):
     all_correct = all_prediction_count = 0
     micro_precision = micro_recall = micro_f1 = 0
+    macro_precision = macro_recall = macro_f1 = 0
 
     previously_seen = set()
     prediction_dict = {}
@@ -122,6 +133,7 @@ def Classification_Performance_Relation(collection, gold_standard_ids, gold_stan
         id, label, confidence, relations = BioC_Document(document)
         if id in gold_standard_ids:
             each_correct = each_prediction_count = 0
+            precision = recall = f1 = 0
 
             for relation in relations:
                 relation_flag = 0
@@ -150,12 +162,26 @@ def Classification_Performance_Relation(collection, gold_standard_ids, gold_stan
                         prediction_dict[relation_string] = relation_confidence
                         previously_seen.add(relation_string)
 
+            relation_count = PMID_Relation_Count('PMID' + id + '_', gold_standard_relations)
+            if each_prediction_count > 0 and each_correct > 0 and relation_count > 0:
+                precision = each_correct / each_prediction_count
+                recall = each_correct / relation_count
+                f1 = 2. * precision * recall / (precision + recall)
+            
+            macro_precision += precision
+            macro_recall += recall
+            macro_f1 += f1
+
     if all_prediction_count > 0 and all_correct > 0 and len(gold_standard_relations) > 0:
         micro_precision = all_correct / all_prediction_count
         micro_recall = all_correct / len(gold_standard_relations)
         micro_f1 = 2. * micro_precision * micro_recall / (micro_precision + micro_recall)
+
+        macro_precision /= len(gold_standard_ids)
+        macro_recall /= len(gold_standard_ids)
+        macro_f1 /= len(gold_standard_ids)
  
-    return micro_precision, micro_recall, micro_f1
+    return micro_precision, micro_recall, micro_f1, macro_precision, macro_recall, macro_f1
 
 program_name = subtask = gold_standard_file = prediction_file = None
 if len(sys.argv) == 4:
@@ -182,8 +208,11 @@ if subtask == 'triage':
     print('F1: %.4f' % f1)
 else:
     gold_standard_ids, gold_standard_relations = BioC_Collection_Relation(gold_standard_reader.collection)
-    micro_precision, micro_recall, micro_f1 = Classification_Performance_Relation(prediction_reader.collection, gold_standard_ids, gold_standard_relations)
+    micro_precision, micro_recall, micro_f1, macro_precision, macro_recall, macro_f1 = Classification_Performance_Relation(prediction_reader.collection, gold_standard_ids, gold_standard_relations)
 
     print('Micro Precision: %.4f' % micro_precision)
     print('Micro Recall: %.4f' % micro_recall)
     print('Micro F1: %.4f' % micro_f1)
+    print('Macro Precision: %.4f' % macro_precision)
+    print('Macro Recall: %.4f' % macro_recall)
+    print('Macro F1: %.4f' % macro_f1)

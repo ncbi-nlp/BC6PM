@@ -33,6 +33,7 @@ def JSON_Document(document):
         relations = []
     else:
         relations = document['relations']
+
     return id, label, confidence, relations
 
 def JSON_Collection_Triage(collection):
@@ -45,6 +46,7 @@ def JSON_Collection_Triage(collection):
             positives.add(id)
         else:
             negatives.add(id)
+
     return positives, negatives
 
 def Classification_Performance_Triage(collection, gold_standard_positive, gold_standard_negative):
@@ -115,9 +117,19 @@ def JSON_Collection_Relation(collection):
 
     return all_ids, all_relations
 
+def PMID_Relation_Count(substring, relations):
+    count = 0
+
+    for relation in relations:
+        if relation.startswith(substring):
+            count += 1.
+
+    return count
+
 def Classification_Performance_Relation(collection, gold_standard_ids, gold_standard_relations):
     correct = prediction_count = 0
     micro_precision = micro_recall = micro_f1 = 0
+    macro_precision = macro_recall = macro_f1 = 0
 
     previously_seen = set()
     prediction_dict = {}
@@ -125,6 +137,9 @@ def Classification_Performance_Relation(collection, gold_standard_ids, gold_stan
     for document in collection.get('documents', []):
         id, label, confidence, relations = JSON_Document(document)
         if id in gold_standard_ids:
+            each_correct = each_prediction_count = 0
+            precision = recall = f1 = 0
+
             for relation in relations:
                 if 'infons' in relation:
                     relation_flag = 0
@@ -147,16 +162,32 @@ def Classification_Performance_Relation(collection, gold_standard_ids, gold_stan
                         if relation_string not in previously_seen:
                             if relation_string in gold_standard_relations:
                                 correct += 1.
+                                each_correct += 1.
                             prediction_count += 1.
+                            each_prediction_count += 1.
                             prediction_dict[relation_string] = relation_confidence
                             previously_seen.add(relation_string)
+
+            relation_count = PMID_Relation_Count('PMID' + id + '_', gold_standard_relations)
+            if each_prediction_count > 0 and each_correct > 0 and relation_count > 0:
+                precision = each_correct / each_prediction_count
+                recall = each_correct / relation_count
+                f1 = 2. * precision * recall / (precision + recall)
+            
+            macro_precision += precision
+            macro_recall += recall
+            macro_f1 += f1
 
     if prediction_count > 0 and correct > 0 and len(gold_standard_relations) > 0:
         micro_precision = correct / prediction_count
         micro_recall = correct / len(gold_standard_relations)
         micro_f1 = 2. * micro_precision * micro_recall / (micro_precision + micro_recall)
-    
-    return micro_precision, micro_recall, micro_f1
+
+        macro_precision /= len(gold_standard_ids)
+        macro_recall /= len(gold_standard_ids)
+        macro_f1 /= len(gold_standard_ids)
+ 
+    return micro_precision, micro_recall, micro_f1, macro_precision, macro_recall, macro_f1
 
 program_name = subtask = gold_standard_file = prediction_file = None
 if len(sys.argv) == 4:
@@ -184,8 +215,11 @@ with open(gold_standard_file) as f1, open(prediction_file) as f2:
         print('F1: %.4f' % f1)        
     else:
         gold_standard_ids, gold_standard_relations = JSON_Collection_Relation(gold_standard_collection)
-        micro_precision, micro_recall, micro_f1 = Classification_Performance_Relation(prediction_collection, gold_standard_ids, gold_standard_relations)
+        micro_precision, micro_recall, micro_f1, macro_precision, macro_recall, macro_f1 = Classification_Performance_Relation(prediction_collection, gold_standard_ids, gold_standard_relations)
 
         print('Micro Precision: %.4f' % micro_precision)
         print('Micro Recall: %.4f' % micro_recall)
         print('Micro F1: %.4f' % micro_f1)
+        print('Macro Precision: %.4f' % macro_precision)
+        print('Macro Recall: %.4f' % macro_recall)
+        print('Macro F1: %.4f' % macro_f1)
